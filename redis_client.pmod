@@ -21,7 +21,7 @@ class Redis {
   int port;
   Stdio.FILE socket;
 
-  private bool pipeline;
+  private int(0..1) pipeline;
   private string pipeline_s;
 
   /*
@@ -37,7 +37,7 @@ class Redis {
   {
     host = _host ? _host : DEFAULT_HOST;
     port = _port ? _port : DEFAULT_PORT;
-    pipeline = false;
+    pipeline = 0;
     socket = Stdio.FILE();
     if (!socket->open_socket()) error("ERROR can't open socket: ");
     socket->set_blocking();
@@ -48,14 +48,14 @@ class Redis {
    * Returns true if the connection was successfully made, otherwise we
    * return false and throw an error.
    */
-  bool
+  int(0..1)
   connect()
   {
     if (socket->connect(host, port)) {
-      return true;
+      return 1;
     } else {
       error("ERROR can't connect to %s:%d: ", host, port);
-      return false;
+      return 0;
     }
   }
 
@@ -292,15 +292,15 @@ class Redis {
     return send("EXEC");
   }
 
-  bool exists(string key) {
+  int(0..1) exists(string key) {
     return send("EXISTS", key);
   }
 
-  bool expire(string key, int seconds) {
+  int(0..1) expire(string key, int seconds) {
     return send("EXPIRE", key, seconds);
   }
 
-  bool expireat(string key, int timestamp) {
+  int(0..1) expireat(string key, int timestamp) {
     return send("EXPIREAT", key, timestamp);
   }
 
@@ -332,7 +332,7 @@ class Redis {
     return send("HDEL", key, @fields);
   }
 
-  bool hexists(string key, string field) {
+  int(0..1) hexists(string key, string field) {
     return send("HEXISTS", key, field);
   }
 
@@ -368,11 +368,11 @@ class Redis {
     return send("HMSET", key, @fields_and_values);
   }
 
-  bool hset(string key, string field, mixed value) {
+  int(0..1) hset(string key, string field, mixed value) {
     return send("HSET", key, field, value);
   }
 
-  bool hsetnx(string key, string field, mixed value) {
+  int(0..1) hsetnx(string key, string field, mixed value) {
     return send("HSETNX", key, field, value);
   }
 
@@ -465,7 +465,7 @@ class Redis {
     werror("WARNING monitor() not implemented yet\n");
   }
 
-  bool move(string key, string db) {
+  int(0..1) move(string key, string db) {
     return send("MOVE", key, db);
   }
 
@@ -473,7 +473,7 @@ class Redis {
     return send("MSET", @keys_and_values);
   }
 
-  bool msetnx(mixed ... keys_and_values) {
+  int(0..1) msetnx(mixed ... keys_and_values) {
     return send("MSETNX", @keys_and_values);
   }
 
@@ -504,15 +504,15 @@ class Redis {
     return _object("IDLETIME", key);
   }
 
-  bool persist(string key) {
+  int(0..1) persist(string key) {
     return send("PERSIST", key);
   }
 
-  bool pexpire(string key, int(0..) ms) {
+  int(0..1) pexpire(string key, int(0..) ms) {
     return send("PEXPIRE", key, ms);
   }
 
-  bool pexpireat(string key, int(0..)mstime) {
+  int(0..1) pexpireat(string key, int(0..)mstime) {
     return send("PEXPIREAT", key, mstime);
   }
 
@@ -556,7 +556,7 @@ class Redis {
     return send("RENAME", key, newkey);
   }
 
-  bool renamenx(string key, string newkey) {
+  int(0..1) renamenx(string key, string newkey) {
     return send("RENAMENX", key, newkey);
   }
 
@@ -643,7 +643,7 @@ class Redis {
     return send("SETEX", key, seconds, value);
   }
 
-  bool setnx(string key, mixed value) {
+  int(0..1) setnx(string key, mixed value) {
     return send("SETNX", key, value);
   }
 
@@ -663,7 +663,7 @@ class Redis {
     return send("SINTERSTORE", dest, @keys);
   }
 
-  bool sismember(string key, mixed member) {
+  int(0..1) sismember(string key, mixed member) {
     return send("SISMEMBER", key, member);
   }
 
@@ -683,7 +683,7 @@ class Redis {
     return send("SMEMBERS", key);
   }
 
-  bool smove(string src, string dest, mixed member) {
+  int(0..1) smove(string src, string dest, mixed member) {
     return send("SMOVE", src, dest, member);
   }
 
