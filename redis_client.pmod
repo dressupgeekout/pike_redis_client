@@ -1,9 +1,6 @@
 /*
  * redis_client.pmod -- Christian Koch <cfkoch@sdf.lonestar.org>
  *
- * This is a Redis client implemented entirely in Pike. The vast majority of
- * the documentation/comments was lifted from http://redis.io/
- *
  * TODO
  *    - pipelining support
  *    - asynchronous API?
