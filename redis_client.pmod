@@ -117,10 +117,10 @@ class Redis {
     switch (reply_type) {
     case "+": // Status reply
       // By definition, status and error replies are only 1 line long.
-      response = socket->gets();
+      response = replace(socket->gets()[1..], "\r\n", "");
       break;
     case "-": // Error reply
-      error("ERROR %s: ", socket->gets());
+      error("ERROR %s: ", replace(socket->gets()[1..], "\r\n", ""));
       break;
     case ":": // Integer reply
       sscanf(socket->gets(), ":%d\r\n", response);
@@ -146,7 +146,7 @@ class Redis {
 
       for (i = 0; i < a_len; i++) {
         socket->gets(); // Skip strlen response
-        response = Array.push(response, socket->gets()); 
+        response = Array.push(response, replace(socket->gets(), "\r\n", "")); 
       }
       break;
     default: // NOTREACHED ever (hopefully)
@@ -833,3 +833,4 @@ class Redis {
     return send("ZUNIONSTORE", dest, numkeys, @args);
   }
 } /* class Redis */
+
