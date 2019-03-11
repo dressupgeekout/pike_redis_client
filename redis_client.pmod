@@ -14,7 +14,7 @@ class Redis {
   private constant DEFAULT_HOST = "127.0.0.1";
   private constant DEFAULT_PORT = 6379;
 
-  string host;
+  string host, unix_path;
   int port;
   Stdio.FILE socket;
 
@@ -30,13 +30,17 @@ class Redis {
    * is Pike's way of doing that?
    */
   void
-  create(string|void _host, int|void _port)
+  create(string|void _host, int|void _port, string|void unix_socket_path)
   {
     host = _host ? _host : DEFAULT_HOST;
     port = _port ? _port : DEFAULT_PORT;
+    unix_path = unix_socket_path;
     pipeline = 0;
     socket = Stdio.FILE();
-    if (!socket->open_socket()) error("ERROR can't open socket: ");
+    if (!unix_path)
+      if (!socket->open_socket()) error("ERROR can't open socket: ");
+    else
+      if (!socket->open_socket(0, 0, "SOCK_STREAM")) error("ERROR can't open socket: ");
     socket->set_blocking();
   }
 
@@ -48,11 +52,20 @@ class Redis {
   int(0..1)
   connect()
   {
-    if (socket->connect(host, port)) {
-      return 1;
-    } else {
-      error("ERROR can't connect to %s:%d: ", host, port);
-      return 0;
+    if (!unix_path) { //connecting over TCP
+      if (socket->connect(host, port)) {
+        return 1;
+      } else {
+        error("ERROR can't connect to %s:%d: ", host, port);
+        return 0;
+      }
+    } else { //connecting over a unix domain socket
+      if (socket->connect_unix(unix_path)) {
+        return 1;
+      } else {
+        error("ERROR can't connect to %s: ", unix_path);
+        return 0;
+      }
     }
   }
 
