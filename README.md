@@ -39,7 +39,7 @@ pipelining nor asynchronous execution just yet.
 
 ## License (2-clause BSD-style)
 
-Copyright (c) 2013 Christian Koch.
+Copyright (c) 2013, 2019 Charlotte Koch.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
