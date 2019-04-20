@@ -20,6 +20,7 @@ class Redis {
 
   private int(0..1) pipeline;
   private string pipeline_s;
+  private bool is_quit = false;
 
   /*
    * Creates a new object which represents a connection to a Redis server.
@@ -37,10 +38,12 @@ class Redis {
     unix_path = unix_socket_path;
     pipeline = 0;
     socket = Stdio.FILE();
-    if (!unix_path)
+    if (!unix_path) {
       if (!socket->open_socket()) error("ERROR can't open socket: ");
-    else
+    }
+    else {
       if (!socket->open_socket(0, 0, "SOCK_STREAM")) error("ERROR can't open socket: ");
+    }
     socket->set_blocking();
   }
 
@@ -98,6 +101,23 @@ class Redis {
     //return reply;
   }
 
+  // Listen forever on the blocking socket for events in channels.
+  // Breaking out of this isnt very clean because it's tricky to
+  // keep track of how many channels the client is subscribed to.
+  // Will just have to disconnect for the time being. If a connection
+  // unsubscribes from its only channel, this will continue looping.
+  void
+  listen_channels(function listen_callback)
+  {
+    // Blocking only, but this really shouldnt be an issue because
+    // connections subscribed to channels only listen.
+    while (!is_quit) {
+      // Pass the response to the callback
+      listen_callback(send());
+    }
+
+  }
+
   /*
    * The abstract "send" method. It sends instructions in Redis' line
    * protocol and blocks for a response. When the response comes, this
@@ -108,20 +128,22 @@ class Redis {
    * XXX Accommodate for pipelining.
    */
   mixed
-  send(string name, mixed ... args)
+  send(void|string name, mixed ... args)
   {
     string reply_type;
     mixed response;
     int i;
 
-    socket->write("*%d\r\n", sizeof(args) + 1); 
-    socket->write("$%d\r\n", sizeof(name));
-    socket->write("%s\r\n", name); 
+    if (name) {
+      socket->write("*%d\r\n", sizeof(args) + 1); 
+      socket->write("$%d\r\n", sizeof(name));
+      socket->write("%s\r\n", name); 
 
-    for (int i = 0; i < sizeof(args); i++) {
-      string arg_s = (string)args[i];
-      socket->write("$%d\r\n", sizeof(arg_s));
-      socket->write("%s\r\n", arg_s);
+      for (int i = 0; i < sizeof(args); i++) {
+        string arg_s = (string)args[i];
+        socket->write("$%d\r\n", sizeof(arg_s));
+        socket->write("%s\r\n", arg_s);
+      }
     }
 
     reply_type = socket->read(1);
@@ -130,10 +152,13 @@ class Redis {
     switch (reply_type) {
     case "+": // Status reply
       // By definition, status and error replies are only 1 line long.
-      response = replace(socket->gets()[1..], "\r\n", "");
+      response = socket->gets()[1..];
+      response = response[..sizeof(response) - 2];
       break;
     case "-": // Error reply
-      error("ERROR %s: ", replace(socket->gets()[1..], "\r\n", ""));
+      response = socket->gets()[1..];
+      response = response[..sizeof(response) - 2];
+      error("ERROR %s: ", response);
       break;
     case ":": // Integer reply
       sscanf(socket->gets(), ":%d\r\n", response);
@@ -148,18 +173,38 @@ class Redis {
         response = 0;
       } else {
         response = socket->read(i + 2); // 2 for \r\n
+        response = response[..sizeof(response) - 3]; //remove trailing crlf
       }
 
       break;
     case "*": // Multi-bulk reply
       response = ({});
+      string temporary, status;
       int a_len;
 
       sscanf(socket->gets(), "*%d\r\n", a_len);
 
       for (i = 0; i < a_len; i++) {
-        socket->gets(); // Skip strlen response
-        response = Array.push(response, replace(socket->gets(), "\r\n", "")); 
+        status = socket->gets(); // Skip strlen response, but if
+        // recieving message when subscribing, this needs to be
+        // checked.
+        if (status[0..0] != ":") {
+          temporary = socket->gets();
+          temporary = temporary[..sizeof(temporary) - 2];
+          response = Array.push(response, temporary);
+        } else {
+          // Redis appears to only send a colon response on
+          // multiple subscriptions as args.
+          // If a colon is passed, restart the loop, but only if
+          // it is not the last event
+          if ((int)status[1..1] == (int)sizeof(args))
+            break;
+          else {
+            i = -1; // Reset loop. Would be cool if redis sent a heads
+            // up about how many there will be, but it doesn't.
+            socket->gets(); // Read the next length because it should always be the same
+          }
+        }
       }
       break;
     default: // NOTREACHED ever (hopefully)
@@ -555,6 +600,7 @@ class Redis {
   }
 
   string quit() {
+    is_quit = true;
     return send("QUIT");
   }
 
