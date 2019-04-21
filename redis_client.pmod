@@ -1,5 +1,5 @@
 /*
- * redis_client.pmod -- Christian Koch <cfkoch@sdf.lonestar.org>
+ * redis_client.pmod -- Charlotte Koch <dressupgeekout@gmail.com>
  *
  * TODO
  *    - pipelining support
@@ -38,12 +38,19 @@ class Redis {
     unix_path = unix_socket_path;
     pipeline = 0;
     socket = Stdio.FILE();
+<<<<<<< HEAD
     if (!unix_path) {
       if (!socket->open_socket()) error("ERROR can't open socket: ");
     }
     else {
       if (!socket->open_socket(0, 0, "SOCK_STREAM")) error("ERROR can't open socket: ");
     }
+=======
+    if (!unix_path)
+      if (!socket->open_socket()) error("ERROR can't open socket: ");
+    else
+      if (!socket->open_socket(0, 0, "SOCK_STREAM")) error("ERROR can't open socket: ");
+>>>>>>> upstream/master
     socket->set_blocking();
   }
 
@@ -152,6 +159,7 @@ class Redis {
     switch (reply_type) {
     case "+": // Status reply
       // By definition, status and error replies are only 1 line long.
+<<<<<<< HEAD
       response = socket->gets()[1..];
       response = response[..sizeof(response) - 2];
       break;
@@ -159,6 +167,12 @@ class Redis {
       response = socket->gets()[1..];
       response = response[..sizeof(response) - 2];
       error("ERROR %s: ", response);
+=======
+      response = replace(socket->gets()[1..], "\r\n", "");
+      break;
+    case "-": // Error reply
+      error("ERROR %s: ", replace(socket->gets()[1..], "\r\n", ""));
+>>>>>>> upstream/master
       break;
     case ":": // Integer reply
       sscanf(socket->gets(), ":%d\r\n", response);
@@ -185,6 +199,7 @@ class Redis {
       sscanf(socket->gets(), "*%d\r\n", a_len);
 
       for (i = 0; i < a_len; i++) {
+<<<<<<< HEAD
         status = socket->gets(); // Skip strlen response, but if
         // recieving message when subscribing, this needs to be
         // checked.
@@ -205,6 +220,10 @@ class Redis {
             socket->gets(); // Read the next length because it should always be the same
           }
         }
+=======
+        socket->gets(); // Skip strlen response
+        response = Array.push(response, replace(socket->gets(), "\r\n", "")); 
+>>>>>>> upstream/master
       }
       break;
     default: // NOTREACHED ever (hopefully)
