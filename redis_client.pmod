@@ -1,5 +1,5 @@
 /*
- * redis_client.pmod -- Christian Koch <cfkoch@sdf.lonestar.org>
+ * redis_client.pmod -- Charlotte Koch <dressupgeekout@gmail.com>
  *
  * TODO
  *    - pipelining support
